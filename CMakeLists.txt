@@ -39,7 +39,9 @@ ADD_CUSTOM_COMMAND(
 
 SET_PROPERTY(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES "lemon;parser.h;parser.out")
 SET_SOURCE_FILES_PROPERTIES("parser.c" PROPERTIES GENERATED TRUE)
-ADD_EXECUTABLE(jsonpath main.c ast.c lexer.c parser.c matcher.c)
-TARGET_LINK_LIBRARIES(jsonpath ubox ${json})
 
-INSTALL(TARGETS jsonpath RUNTIME DESTINATION bin)
+ADD_LIBRARY(jsonpath SHARED jsonpath.c ast.c lexer.c parser.c matcher.c)
+ADD_EXECUTABLE(jsonpathdemo main.c)
+TARGET_LINK_LIBRARIES(jsonpathdemo ubox ${json} jsonpath)
+
+INSTALL(TARGETS jsonpathdemo RUNTIME DESTINATION bin)

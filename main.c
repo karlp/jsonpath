@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -25,17 +26,8 @@
 	#include <json-c/json.h>
 #endif
 
-#include <libubox/list.h>
+#include "jsonpath.h"
 
-#include "lexer.h"
-#include "parser.h"
-#include "matcher.h"
-
-
-struct match_item {
-	struct json_object *jsobj;
-	struct list_head list;
-};
 
 static void
 print_usage(char *app)
@@ -116,300 +108,32 @@ parse_json(FILE *fd, const char *source, const char **error)
 	return obj;
 }
 
-static void
-print_string(const char *s)
-{
-	const char *p;
+/* Example of how someone could use it in their application. */
+static void do_karl_test(FILE *input, const char *source, char *expr) {
+	struct json_object *jsobj = NULL;
+	const char *jserr;
+	jsobj = parse_json(input, source, &jserr);
 
-	printf("'");
-
-	for (p = s; *p; p++)
+	if (!jsobj)
 	{
-		if (*p == '\'')
-			printf("'\"'\"'");
-		else
-			printf("%c", *p);
-	}
-
-	printf("'");
-}
-
-static void
-print_separator(const char *sep, int *sc, int sl)
-{
-	if (*sc > 0)
-	{
-		switch (sep[(*sc - 1) % sl])
-		{
-		case '"':
-			printf("'\"'");
-			break;
-
-		case '\'':
-			printf("\"'\"");
-			break;
-
-		case ' ':
-			printf("\\ ");
-			break;
-
-		default:
-			printf("%c", sep[(*sc - 1) % sl]);
-		}
-	}
-
-	(*sc)++;
-}
-
-static void
-export_value(struct list_head *matches, const char *prefix, const char *sep,
-             int limit)
-{
-	int n, len;
-	int sc = 0, sl = strlen(sep);
-	struct match_item *item;
-
-	if (list_empty(matches))
+		fprintf(stderr, "Failed to parse json data: %s\n", jserr);
 		return;
-
-	if (prefix)
-	{
-		printf("export %s=", prefix);
-
-		list_for_each_entry(item, matches, list)
-		{
-			if (limit-- <= 0)
-				break;
-
-			switch (json_object_get_type(item->jsobj))
-			{
-			case json_type_object:
-				; /* a label can only be part of a statement */
-				json_object_object_foreach(item->jsobj, key, val)
-				{
-					if (!val)
-						continue;
-
-					print_separator(sep, &sc, sl);
-					print_string(key);
-				}
-				break;
-
-			case json_type_array:
-				for (n = 0, len = json_object_array_length(item->jsobj);
-				     n < len; n++)
-				{
-					print_separator(sep, &sc, sl);
-					printf("%d", n);
-				}
-				break;
-
-			case json_type_boolean:
-				print_separator(sep, &sc, sl);
-				printf("%d", json_object_get_boolean(item->jsobj));
-				break;
-
-			case json_type_int:
-				print_separator(sep, &sc, sl);
-				printf("%d", json_object_get_int(item->jsobj));
-				break;
-
-			case json_type_double:
-				print_separator(sep, &sc, sl);
-				printf("%f", json_object_get_double(item->jsobj));
-				break;
-
-			case json_type_string:
-				print_separator(sep, &sc, sl);
-				print_string(json_object_get_string(item->jsobj));
-				break;
-
-			case json_type_null:
-				break;
-			}
-		}
-
-		printf("; ");
 	}
-	else
-	{
-		list_for_each_entry(item, matches, list)
-		{
-			if (limit-- <= 0)
-				break;
-
-			switch (json_object_get_type(item->jsobj))
-			{
-			case json_type_object:
-			case json_type_array:
-			case json_type_boolean:
-			case json_type_int:
-			case json_type_double:
-				printf("%s\n", json_object_to_json_string(item->jsobj));
-				break;
-
-			case json_type_string:
-				printf("%s\n", json_object_get_string(item->jsobj));
-				break;
-
-			case json_type_null:
-				break;
-			}
-		}
-	}
-}
-
-static void
-export_type(struct list_head *matches, const char *prefix, int limit)
-{
-	bool first = true;
-	struct match_item *item;
-	const char *types[] = {
-		"null",
-		"boolean",
-		"double",
-		"int",
-		"object",
-		"array",
-		"string"
-	};
-
-	if (list_empty(matches))
-		return;
-
-	if (prefix)
-		printf("export %s=", prefix);
-
-	list_for_each_entry(item, matches, list)
-	{
-		if (!first)
-			printf("\\ ");
-
-		if (limit-- <= 0)
-			break;
-
-		printf("%s", types[json_object_get_type(item->jsobj)]);
-		first = false;
-	}
-
-	if (prefix)
-		printf("; ");
-	else
-		printf("\n");
-}
-
-static void
-match_cb(struct json_object *res, void *priv)
-{
-	struct list_head *h = priv;
-	struct match_item *i = calloc(1, sizeof(*i));
-
-	if (i)
-	{
-		i->jsobj = res;
-		list_add_tail(&i->list, h);
-	}
-}
-
-static void
-print_error(struct jp_state *state, char *expr)
-{
-	int i;
-	bool first = true;
-
-	fprintf(stderr, "Syntax error: ");
-
-	switch (state->error_code)
-	{
-	case -4:
-		fprintf(stderr, "Unexpected character\n");
-		break;
-
-	case -3:
-		fprintf(stderr, "String or label literal too long\n");
-		break;
-
-	case -2:
-		fprintf(stderr, "Invalid escape sequence\n");
-		break;
-
-	case -1:
-		fprintf(stderr, "Unterminated string\n");
-		break;
-
-	default:
-		for (i = 0; i < sizeof(state->error_code) * 8; i++)
-		{
-			if (state->error_code & (1 << i))
-			{
-				fprintf(stderr,
-				        first ? "Expecting %s" : " or %s", tokennames[i]);
-
-				first = false;
-			}
-		}
-
-		fprintf(stderr, "\n");
-		break;
-	}
-
-	fprintf(stderr, "In expression %s\n", expr);
-	fprintf(stderr, "Near here ----");
-
-	for (i = 0; i < state->error_pos; i++)
-		fprintf(stderr, "-");
-
-	fprintf(stderr, "^\n");
-}
-
-static bool
-filter_json(int opt, struct json_object *jsobj, char *expr, const char *sep,
-            int limit)
-{
-	struct jp_state *state;
-	const char *prefix = NULL;
+	
 	struct list_head matches;
 	struct match_item *item, *tmp;
-	struct json_object *res = NULL;
-
-	state = jp_parse(expr);
-
-	if (!state)
-	{
-		fprintf(stderr, "Out of memory\n");
-		goto out;
-	}
-	else if (state->error_code)
-	{
-		print_error(state, expr);
-		goto out;
-	}
-
 	INIT_LIST_HEAD(&matches);
 
-	res = jp_match(state->path, jsobj, match_cb, &matches);
-	prefix = (state->path->type == T_LABEL) ? state->path->str : NULL;
-
-	switch (opt)
-	{
-	case 't':
-		export_type(&matches, prefix, limit);
-		break;
-
-	default:
-		export_value(&matches, prefix, sep, limit);
-		break;
+	if (jsonpath_filter(jsobj, expr, &matches)) {
+		printf("Got a match with: %s\n", expr);
+		// iterate matches and dump, then free...
+		list_for_each_entry_safe(item, tmp, &matches, list) {
+			printf("Match was: %s\n", json_object_to_json_string(item->jsobj));
+			free(item);
+		}
 	}
-
-	list_for_each_entry_safe(item, tmp, &matches, list)
-		free(item);
-
-out:
-	if (state)
-		jp_free(state);
-
-	return !!res;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -424,7 +148,7 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	while ((opt = getopt(argc, argv, "hi:s:e:t:F:l:q")) != -1)
+	while ((opt = getopt(argc, argv, "hi:s:e:k:t:F:l:q")) != -1)
 	{
 		switch (opt)
 		{
@@ -479,7 +203,10 @@ int main(int argc, char **argv)
 				rv = 1;
 
 			break;
-
+		case 'k':
+			do_karl_test(input, source, optarg);
+			break;
+			
 		case 'q':
 			fclose(stderr);
 			break;
