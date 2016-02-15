@@ -14,8 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <stdbool.h>
+#include <string.h>
 #include "parser.h"
-#include "matcher.h"
+#include "jsonpath.h"
 
 static struct json_object *
 jp_match_next(struct jp_opcode *ptr,

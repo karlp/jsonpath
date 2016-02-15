@@ -19,22 +19,7 @@
 
 #include <stddef.h>
 
-struct jp_opcode {
-	int type;
-	struct jp_opcode *next;
-	struct jp_opcode *down;
-	struct jp_opcode *sibling;
-	char *str;
-	int num;
-};
-
-struct jp_state {
-	struct jp_opcode *pool;
-	struct jp_opcode *path;
-	int error_pos;
-	int error_code;
-	int off;
-};
+#include "jsonpath.h"
 
 static inline struct jp_opcode *
 append_op(struct jp_opcode *a, struct jp_opcode *b)

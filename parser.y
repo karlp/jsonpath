@@ -32,6 +32,7 @@
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"
+#include "jsonpath.h"
 
 #define alloc_op(type, num, str, ...) \
 	jp_alloc_op(s, type, num, str, ##__VA_ARGS__, NULL)
@@ -41,7 +42,7 @@
 %syntax_error {
 	int i;
 
-	for (i = 0; i < sizeof(tokennames) / sizeof(tokennames[0]); i++)
+	for (i = 0; i < sizeof(jp_tokennames) / sizeof(jp_tokennames[0]); i++)
 		if (yy_find_shift_action(yypParser, (YYCODETYPE)i) < YYNSTATE + YYNRULE)
 			s->error_code |= (1 << i);
 

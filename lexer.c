@@ -22,6 +22,7 @@
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"
+#include "jsonpath.h"
 
 
 struct token {
@@ -378,7 +379,7 @@ static const struct token tokens[] = {
 	{ T_NUMBER,		"09",    0, parse_number },
 };
 
-const char *tokennames[23] = {
+const char *jp_tokennames[23] = {
 	[0]				= "End of file",
 	[T_AND]			= "'&&'",
 	[T_OR]			= "'||'",
@@ -449,4 +450,21 @@ jp_get_token(struct jp_state *s, const char *input, int *mlen)
 	}
 
 	return jp_alloc_op(s, op.type, op.num, op.str, NULL);
+}
+
+static const char* jp_errors[] = {
+	NULL,
+	"Unterminated string",
+	"Invalid escape sequence",
+	"String or label literal too long",
+	"Unexpected character"
+};
+
+const char* jp_error_to_string(int error) {
+	if (error < 0) {
+		// check overbounds ?
+		return jp_errors[-error];
+	}
+	/* generate a string? that then needs to be freed!*/
+	return NULL;
 }

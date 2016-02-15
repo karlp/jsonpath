@@ -19,8 +19,6 @@
 
 #include "ast.h"
 
-extern const char *tokennames[23];
-
 struct jp_opcode *
 jp_get_token(struct jp_state *s, const char *input, int *mlen);
 

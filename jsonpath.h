@@ -12,27 +12,59 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
 #ifdef JSONC
 	#include <json.h>
 #else
 	#include <json-c/json.h>
 #endif
 
-#include <libubox/list.h>
+	/* TODO, pretty dubious about this!  are these labels really necessary
+	 to be exposed? */
+#include "parser.h"
 
-struct match_item {
-	struct json_object *jsobj;
-	struct list_head list;
+struct jp_opcode {
+	int type;
+	struct jp_opcode *next;
+	struct jp_opcode *down;
+	struct jp_opcode *sibling;
+	char *str;
+	int num;
 };
 
-/* legacy, shouldn't really be in the library per se */
-bool
-filter_json(int opt, struct json_object *jsobj, char *expr, const char *sep,
-            int limit);
+struct jp_state {
+	struct jp_opcode *pool;
+	struct jp_opcode *path;
+	int error_pos;
+	int error_code;
+	int off;
+};
 
-bool jsonpath_filter(struct json_object *input, char *expr, struct list_head *matches);
 
+typedef void (*jp_match_cb_t)(struct json_object *res, void *priv);
+	
+/**
+ * Parse a jsonpath expression.
+ * This is used to to preprocess an expression so it can be used multiple times
+ * @param expr string jsonpath
+ * @return jp_state structure suitable for use
+ */
+struct jp_state* jp_parse(const char *expr);
+
+const char* jp_error_to_string(int error);
+extern const char *jp_tokennames[23];
+
+
+/**
+ * Free a parsed jsonpath expression
+ * @param filter
+ */
+void jp_free(struct jp_state *filter);
+
+/* TODO - what exactly is the return type here?*/
+struct json_object *
+jp_match(struct jp_opcode *path, struct json_object *input,
+         jp_match_cb_t cb, void *userdata);
+	
 #ifdef	__cplusplus
 }
 #endif
