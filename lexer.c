@@ -461,8 +461,9 @@ static const char* jp_errors[] = {
 
 const char* jp_error_to_string(int error) {
 	if (error < 0) {
-		// check overbounds ?
-		return jp_errors[-error];
+		if (-error <= ARRAY_SIZE(jp_errors)) {
+			return jp_errors[-error];
+		}
 	}
 	/* generate a string? that then needs to be freed!*/
 	return NULL;
