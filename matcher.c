@@ -16,7 +16,6 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include "parser.h"
 #include "jsonpath.h"
 
 static struct json_object *
