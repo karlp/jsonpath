@@ -86,7 +86,14 @@ extern const char *jp_tokennames[23];
  */
 void jp_free(struct jp_state *filter);
 
-/* TODO - what exactly is the return type here?*/
+/**
+ * Search a json_object for a jsonpath, invoking on a callback on each match.
+ * @param path the parsed jsonpath to search for
+ * @param input the parsed json_object to search
+ * @param cb called for each match
+ * @param userdata provided to the callback
+ * @return the first matched object, if found
+ */
 struct json_object *
 jp_match(struct jp_opcode *path, struct json_object *input,
          jp_match_cb_t cb, void *userdata);
