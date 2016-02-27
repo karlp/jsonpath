@@ -20,18 +20,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-#ifdef JSONC
-	#include <json.h>
-#else
-	#include <json-c/json.h>
-#endif
-
-#include "ast.h"
-
-typedef void (*jp_match_cb_t)(struct json_object *res, void *priv);
-
-struct json_object *
-jp_match(struct jp_opcode *path, struct json_object *jsobj,
-         jp_match_cb_t cb, void *priv);
+#include <json.h>
 
 #endif

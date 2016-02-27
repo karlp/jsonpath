@@ -16,25 +16,23 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
-#ifdef JSONC
-	#include <json.h>
-#else
-	#include <json-c/json.h>
-#endif
+#include <json.h>
+
+#include "jsonpath.h"
 
 #include <libubox/list.h>
 
-#include "lexer.h"
-#include "parser.h"
-#include "matcher.h"
-
-
 struct match_item {
-	struct json_object *jsobj;
-	struct list_head list;
+       struct json_object *jsobj;
+       struct list_head list;
+};
+
+struct karl_matching_state_example {
+	int match_count;
 };
 
 static void
@@ -115,6 +113,52 @@ parse_json(FILE *fd, const char *source, const char **error)
 
 	return obj;
 }
+
+static void karl_test_cb(struct json_object *item, void *userdata)
+{
+	struct karl_matching_state_example *st = userdata;
+	printf("Match %d was: %s\n", st->match_count++,
+		json_object_to_json_string(item));
+}
+
+/* Example of how someone could use it in their application. */
+static void do_karl_test(FILE *input, const char *source, char *expr) {
+	struct json_object *jsobj = NULL;
+	const char *jserr;
+	jsobj = parse_json(input, source, &jserr);
+
+	if (!jsobj)
+	{
+		fprintf(stderr, "Failed to parse json data: %s\n", jserr);
+		return;
+	}
+	
+	struct jp_state *state = jp_parse(expr);
+	if (!state)
+	{
+		fprintf(stderr, "Out of memory\n");
+		return;
+	}
+	if (state->error_code) {
+		if (state->error_code < 0) {
+			fprintf(stderr, "Jsonpath expression parse failed: %s\n",
+				jp_error_to_string(state->error_code));
+		} else {
+			/* bitfield of expected allowed values.... */
+			fprintf(stderr, "see what 'print_error' does.. yo...\n");
+		}
+		goto out;
+	}
+	struct karl_matching_state_example karl_state = { 0 };
+	if (jp_match(state->path, jsobj, karl_test_cb, &karl_state)) {
+		printf("Got %d matches with: %s\n", karl_state.match_count, expr);
+	} else {
+		printf("no matches at all for: %s\n", expr);
+	}
+out:
+	jp_free(state);
+}
+
 
 static void
 print_string(const char *s)
@@ -298,6 +342,9 @@ export_type(struct list_head *matches, const char *prefix, int limit)
 		printf("\n");
 }
 
+
+
+
 static void
 match_cb(struct json_object *res, void *priv)
 {
@@ -310,6 +357,8 @@ match_cb(struct json_object *res, void *priv)
 		list_add_tail(&i->list, h);
 	}
 }
+
+
 
 static void
 print_error(struct jp_state *state, char *expr)
@@ -343,7 +392,7 @@ print_error(struct jp_state *state, char *expr)
 			if (state->error_code & (1 << i))
 			{
 				fprintf(stderr,
-				        first ? "Expecting %s" : " or %s", tokennames[i]);
+				        first ? "Expecting %s" : " or %s", jp_tokennames[i]);
 
 				first = false;
 			}
@@ -361,6 +410,7 @@ print_error(struct jp_state *state, char *expr)
 
 	fprintf(stderr, "^\n");
 }
+
 
 static bool
 filter_json(int opt, struct json_object *jsobj, char *expr, const char *sep,
@@ -424,7 +474,7 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	while ((opt = getopt(argc, argv, "hi:s:e:t:F:l:q")) != -1)
+	while ((opt = getopt(argc, argv, "hi:s:e:k:t:F:l:q")) != -1)
 	{
 		switch (opt)
 		{
@@ -479,7 +529,10 @@ int main(int argc, char **argv)
 				rv = 1;
 
 			break;
-
+		case 'k':
+			do_karl_test(input, source, optarg);
+			break;
+			
 		case 'q':
 			fclose(stderr);
 			break;

@@ -3,5 +3,11 @@ CMakeCache.txt
 CMakeFiles
 *.cmake
 install_manifest.txt
-jsonpath
+jsonpathdemo
 parser.[ch]
+parser.out
+jsonpathdemo
+libjsonpath.so
+contrib/lemon
+*.swp
+nbproject

@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <libubox/utils.h>
 
 struct jp_opcode *
 jp_alloc_op(struct jp_state *s, int type, int num, char *str, ...)
@@ -30,8 +29,12 @@ jp_alloc_op(struct jp_state *s, int type, int num, char *str, ...)
 	char *ptr;
 	struct jp_opcode *newop, *child;
 
-	newop = calloc_a(sizeof(*newop),
-	                 str ? &ptr : NULL, str ? strlen(str) + 1 : 0);
+	if (str) {
+		newop = calloc(1, sizeof(*newop) + strlen(str) + 1);
+		ptr = (char *)newop + sizeof(*newop);
+	} else {
+		newop = calloc(1, sizeof(*newop));
+	}
 
 	if (!newop)
 	{
