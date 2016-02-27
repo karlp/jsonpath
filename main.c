@@ -20,11 +20,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#ifdef JSONC
-	#include <json.h>
-#else
-	#include <json-c/json.h>
-#endif
+#include <json.h>
 
 #include "jsonpath.h"
 

@@ -20,11 +20,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-#ifdef JSONC
-	#include <json.h>
-#else
-	#include <json-c/json.h>
-#endif
-
+#include <json.h>
 
 #endif

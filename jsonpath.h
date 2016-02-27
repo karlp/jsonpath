@@ -12,11 +12,7 @@
 extern "C" {
 #endif
 
-#ifdef JSONC
-	#include <json.h>
-#else
-	#include <json-c/json.h>
-#endif
+#include <json.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))

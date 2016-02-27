@@ -15,18 +15,13 @@ IF(APPLE)
   LINK_DIRECTORIES(/opt/local/lib)
 ENDIF()
 
-find_library(json NAMES json-c json)
-
 IF(DEBUG)
   ADD_DEFINITIONS(-DDEBUG -g3)
 ENDIF()
 
 INCLUDE(FindPkgConfig)
-PKG_CHECK_MODULES(JSONC json-c json)
-IF(JSONC_FOUND)
-  ADD_DEFINITIONS(-DJSONC)
-  INCLUDE_DIRECTORIES(${JSONC_INCLUDE_DIRS})
-ENDIF()
+pkg_search_module(JSONC required json-c json)
+INCLUDE_DIRECTORIES(${JSONC_INCLUDE_DIRS})
 
 ADD_CUSTOM_COMMAND(
   OUTPUT contrib/lemon
@@ -48,7 +43,7 @@ SET_SOURCE_FILES_PROPERTIES("parser.c" PROPERTIES GENERATED TRUE)
 ADD_LIBRARY(jsonpath SHARED ast.c lexer.c parser.c matcher.c)
 SET_TARGET_PROPERTIES(jsonpath PROPERTIES PUBLIC_HEADER jsonpath.h)
 ADD_EXECUTABLE(jsonpathdemo main.c)
-TARGET_LINK_LIBRARIES(jsonpathdemo ubox ${json} jsonpath)
+TARGET_LINK_LIBRARIES(jsonpathdemo ubox ${JSONC_LIBRARIES} jsonpath)
 
 INSTALL(TARGETS jsonpathdemo RUNTIME DESTINATION bin)
 INSTALL(TARGETS jsonpath
